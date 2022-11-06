@@ -4,8 +4,9 @@ import "./Voter.sol";
 
 contract Election {
     enum STAGE {
-        CANDITATE_REGISTRATION,
+        CANDIDATE_REGISTRATION,
         VOTING,
+        REVEAL,
         TALLYING,
         WINNER_DECLARATION
     }
@@ -46,7 +47,7 @@ contract Election {
         is_restricted_to_area = _is_restricted_to_area;
         hostedBy = msg.sender;
         area_code = _area_code;
-        stage = STAGE.CANDITATE_REGISTRATION;
+        stage = STAGE.CANDIDATE_REGISTRATION;
         eca_address = _eca_address;
     }
 
@@ -64,7 +65,7 @@ contract Election {
         onlyECA
     {
         require(
-            stage == STAGE.CANDITATE_REGISTRATION,
+            stage == STAGE.CANDIDATE_REGISTRATION,
             "candidate registration is over"
         );
         Candidates[candidatesCount].partyName = partyName;
@@ -85,13 +86,14 @@ contract Election {
 
     function updateState() public {
         require(stage < STAGE.WINNER_DECLARATION, "voting is at last stage");
-        if (stage == STAGE.CANDITATE_REGISTRATION) stage = STAGE.VOTING;
-        else if (stage == STAGE.VOTING) stage = STAGE.TALLYING;
+        if (stage == STAGE.CANDIDATE_REGISTRATION) stage = STAGE.VOTING;
+        else if (stage == STAGE.VOTING) stage = STAGE.REVEAL;
+        else if (stage == STAGE.REVEAL) stage = STAGE.TALLYING;
         else stage = STAGE.WINNER_DECLARATION;
     }
 
     function vote(uint256 _candidate) public only_valid_voter {
-        if (stage == STAGE.CANDITATE_REGISTRATION)
+        if (stage == STAGE.CANDIDATE_REGISTRATION)
             revert("voting is not yet startd");
         if (stage != STAGE.VOTING) revert("voting is over");
         require(!is_voted[msg.sender], "Voter has already Voted!");
