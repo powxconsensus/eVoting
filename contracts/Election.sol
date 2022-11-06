@@ -19,15 +19,19 @@ contract Election {
         address user_address;
     }
 
-    struct votes {
+    struct Commit {
         bytes32 vote_commit;
-        address voted_by;
+    }
+
+    struct votes {
+        uint32 candidateId;
     }
 
     STAGE public stage;
     uint256 candidatesCount;
     mapping(uint256 => Candidate) public Candidates;
-    mapping(uint256 => votes) private voters;
+    mapping(address => Commit) private voters;
+    mapping(uint256 => votes) private valid_votes;
     mapping(address => bool) is_voted;
     uint256 total_vote = 0;
     address hostedBy;
@@ -97,10 +101,26 @@ contract Election {
             revert("voting is not yet startd");
         if (stage != STAGE.VOTING) revert("voting is over");
         require(!is_voted[msg.sender], "Voter has already Voted!");
-        votes storage new_vote = voters[total_vote++];
-        new_vote.vote_commit = _vote;
-        new_vote.voted_by = msg.sender;
+        Commit storage new_commit = voters[msg.sender];
+        new_commit.vote_commit = _vote;
         is_voted[msg.sender] = true;
+    }
+
+    /*
+        This function takes in candidate id that voter voted for and 
+        compares its keccak to the vote submited during voting stage by the voter
+    */
+
+    function revealVote(uint32 _candidateId) public only_valid_voter {
+        /*
+            requires and reverts.
+        */
+
+        if (
+            keccak256(
+                abi.encodePacked(uint256(_candidateId), address(msg.sender))
+            ) == voters[msg.sender].vote_commit
+        ) valid_votes[total_vote++].candidateId = _candidateId;
     }
 
     /*
@@ -110,7 +130,7 @@ contract Election {
     function tallyVote() public {
         require(stage == STAGE.TALLYING, "tallying is not yet startd");
         for (uint256 i = 0; i < total_vote; i++) {
-            Candidates[voters[i].candidateId].voteCount++;
+            Candidates[valid_votes[i].candidateId].voteCount++;
         }
     }
 
@@ -126,6 +146,10 @@ contract Election {
         }
         return Candidates[winnerId];
     }
+
+    /*
+        since count-reveal automatically verifies the vote there is no need to generate a new proof!!
+    */
 
     // proof to generate, if user voted the correct candidate or not
     // function myVote()
