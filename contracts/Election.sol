@@ -98,7 +98,7 @@ contract Election {
 
     function vote(bytes32 _vote) public only_valid_voter {
         if (stage == STAGE.CANDIDATE_REGISTRATION)
-            revert("voting is not yet startd");
+            revert("voting is not yet started");
         if (stage != STAGE.VOTING) revert("voting is over");
         require(!is_voted[msg.sender], "Voter has already Voted!");
         Commit storage new_commit = voters[msg.sender];
@@ -112,15 +112,20 @@ contract Election {
     */
 
     function revealVote(uint32 _candidateId) public only_valid_voter {
-        /*
-            requires and reverts.
-        */
-
+        if (stage == STAGE.CANDIDATE_REGISTRATION || stage == STAGE.VOTING)
+            revert("reveal stage has not yet started");
+        if (stage != STAGE.REVEAL) revert("Reveal stage is over");
+        require(is_voted[msg.sender], "Voter has not voted during Voting!");
         if (
             keccak256(
                 abi.encodePacked(uint256(_candidateId), address(msg.sender))
             ) == voters[msg.sender].vote_commit
-        ) valid_votes[total_vote++].candidateId = _candidateId;
+        ) {
+            votes storage current_vote = valid_votes[total_vote++];
+            current_vote.candidateId = _candidateId;
+        }
+
+        // else say not correct input; try again.
     }
 
     /*
