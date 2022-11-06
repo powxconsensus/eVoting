@@ -20,7 +20,7 @@ contract Election {
     }
 
     struct votes {
-        uint256 candidateId;
+        bytes32 vote_commit;
         address voted_by;
     }
 
@@ -92,17 +92,13 @@ contract Election {
         else stage = STAGE.WINNER_DECLARATION;
     }
 
-    function vote(uint256 _candidate) public only_valid_voter {
+    function vote(bytes32 _vote) public only_valid_voter {
         if (stage == STAGE.CANDIDATE_REGISTRATION)
             revert("voting is not yet startd");
         if (stage != STAGE.VOTING) revert("voting is over");
         require(!is_voted[msg.sender], "Voter has already Voted!");
-        require(
-            _candidate < candidatesCount && _candidate >= 0,
-            "Invalid candidate to Vote!"
-        );
         votes storage new_vote = voters[total_vote++];
-        new_vote.candidateId = _candidate;
+        new_vote.vote_commit = _vote;
         new_vote.voted_by = msg.sender;
         is_voted[msg.sender] = true;
     }
