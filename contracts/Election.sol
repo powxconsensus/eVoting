@@ -4,8 +4,9 @@ import "./Voter.sol";
 
 contract Election {
     enum STAGE {
-        CANDITATE_REGISTRATION,
+        CANDIDATE_REGISTRATION,
         VOTING,
+        REVEAL,
         TALLYING,
         WINNER_DECLARATION
     }
@@ -18,15 +19,19 @@ contract Election {
         address user_address;
     }
 
+    struct Commit {
+        bytes32 vote_commit;
+    }
+
     struct votes {
-        uint256 candidateId;
-        address voted_by;
+        uint32 candidateId;
     }
 
     STAGE public stage;
     uint256 candidatesCount;
     mapping(uint256 => Candidate) public Candidates;
-    mapping(uint256 => votes) private voters;
+    mapping(address => Commit) private voters;
+    mapping(uint256 => votes) private valid_votes;
     mapping(address => bool) is_voted;
     uint256 total_vote = 0;
     address hostedBy;
@@ -46,7 +51,7 @@ contract Election {
         is_restricted_to_area = _is_restricted_to_area;
         hostedBy = msg.sender;
         area_code = _area_code;
-        stage = STAGE.CANDITATE_REGISTRATION;
+        stage = STAGE.CANDIDATE_REGISTRATION;
         eca_address = _eca_address;
     }
 
@@ -64,7 +69,7 @@ contract Election {
         onlyECA
     {
         require(
-            stage == STAGE.CANDITATE_REGISTRATION,
+            stage == STAGE.CANDIDATE_REGISTRATION,
             "candidate registration is over"
         );
         Candidates[candidatesCount].partyName = partyName;
@@ -85,24 +90,42 @@ contract Election {
 
     function updateState() public {
         require(stage < STAGE.WINNER_DECLARATION, "voting is at last stage");
-        if (stage == STAGE.CANDITATE_REGISTRATION) stage = STAGE.VOTING;
-        else if (stage == STAGE.VOTING) stage = STAGE.TALLYING;
+        if (stage == STAGE.CANDIDATE_REGISTRATION) stage = STAGE.VOTING;
+        else if (stage == STAGE.VOTING) stage = STAGE.REVEAL;
+        else if (stage == STAGE.REVEAL) stage = STAGE.TALLYING;
         else stage = STAGE.WINNER_DECLARATION;
     }
 
-    function vote(uint256 _candidate) public only_valid_voter {
-        if (stage == STAGE.CANDITATE_REGISTRATION)
-            revert("voting is not yet startd");
+    function vote(bytes32 _vote) public only_valid_voter {
+        if (stage == STAGE.CANDIDATE_REGISTRATION)
+            revert("voting is not yet started");
         if (stage != STAGE.VOTING) revert("voting is over");
         require(!is_voted[msg.sender], "Voter has already Voted!");
-        require(
-            _candidate < candidatesCount && _candidate >= 0,
-            "Invalid candidate to Vote!"
-        );
-        votes storage new_vote = voters[total_vote++];
-        new_vote.candidateId = _candidate;
-        new_vote.voted_by = msg.sender;
+        Commit storage new_commit = voters[msg.sender];
+        new_commit.vote_commit = _vote;
         is_voted[msg.sender] = true;
+    }
+
+    /*
+        This function takes in candidate id that voter voted for and 
+        compares its keccak to the vote submited during voting stage by the voter
+    */
+
+    function revealVote(uint32 _candidateId) public only_valid_voter {
+        if (stage == STAGE.CANDIDATE_REGISTRATION || stage == STAGE.VOTING)
+            revert("reveal stage has not yet started");
+        if (stage != STAGE.REVEAL) revert("Reveal stage is over");
+        require(is_voted[msg.sender], "Voter has not voted during Voting!");
+        if (
+            keccak256(
+                abi.encodePacked(uint256(_candidateId), address(msg.sender))
+            ) == voters[msg.sender].vote_commit
+        ) {
+            votes storage current_vote = valid_votes[total_vote++];
+            current_vote.candidateId = _candidateId;
+        }
+
+        // else say not correct input; try again.
     }
 
     /*
@@ -112,7 +135,7 @@ contract Election {
     function tallyVote() public {
         require(stage == STAGE.TALLYING, "tallying is not yet startd");
         for (uint256 i = 0; i < total_vote; i++) {
-            Candidates[voters[i].candidateId].voteCount++;
+            Candidates[valid_votes[i].candidateId].voteCount++;
         }
     }
 
@@ -128,6 +151,10 @@ contract Election {
         }
         return Candidates[winnerId];
     }
+
+    /*
+        since count-reveal automatically verifies the vote there is no need to generate a new proof!!
+    */
 
     // proof to generate, if user voted the correct candidate or not
     // function myVote()
