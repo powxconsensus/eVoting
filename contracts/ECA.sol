@@ -10,6 +10,7 @@ contract ECA {
         uint256 idx;
         bool is_exist;
     }
+
     address[] eca_members;
     mapping(address => eca_details) eca;
     uint256 public totalECA = 0;
@@ -98,7 +99,8 @@ contract ECA {
         eca_request memory request = requests_mp[request_id];
         require(
             request.of_type == REQUEST_TYPE.ADD ||
-                request.of_type == REQUEST_TYPE.REMOVE,
+                request.of_type == REQUEST_TYPE.REMOVE ||
+                request.of_type == REQUEST_TYPE.TRANSFER,
             "request is not valid"
         );
         Voting voting_instance = Voting(request.voting_address);
@@ -115,6 +117,8 @@ contract ECA {
             delete eca[request.who];
             totalECA--;
             // TODO:: emit event, eca removed
+        } else if (request.of_type == REQUEST_TYPE.TRANSFER) {
+            // TODO:: emit event, eca ownership transfer
         }
 
         // removed request
@@ -122,6 +126,15 @@ contract ECA {
         requests_mp[request_mp_idx[request.who]] = requests_mp[total_requests];
         request_mp_idx[request.who] = 0;
         delete requests_mp[total_requests];
+    }
+
+    function getRequestById(uint256 request_id)
+        public
+        view
+        returns (eca_request memory)
+    {
+        require(request_id < total_requests, "invalid request id!");
+        return requests_mp[request_id];
     }
 
     // give all requests as array
