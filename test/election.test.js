@@ -1,3 +1,4 @@
+const ethers = require("ethers");
 const Election = artifacts.require("./Election.sol");
 const Voter = artifacts.require("./Voter.sol");
 const ECA = artifacts.require("./ECA.sol");
@@ -5,6 +6,7 @@ const chai = require("./setupchai");
 const assert = require("assert");
 const { equal } = require("assert");
 const { resolve } = require("path");
+const exp = require("constants");
 const BN = web3.utils.BN;
 
 const expect = chai.expect;
@@ -146,24 +148,65 @@ contract("Election", (accounts) => {
       "Now, election status is updated by ECA from Candidate Registration -> Voting (Voters can vote now!!)"
     );
     console.log("User is voting (without reveling identity using zksnarks)");
-    await expect(election_instance.vote(0, { from: users[0].address })).to
-      .eventually.be.fulfilled;
+    // let param1 = 0 + users[0].address;
+    let param1 = ethers.utils.solidityPack(
+      ["uint256", "address"],
+      [0, users[0].address]
+    );
+    await expect(
+      election_instance.vote(web3.utils.keccak256(param1), {
+        from: users[0].address,
+      })
+    ).to.eventually.be.fulfilled;
     console.log("User 1 voted successfully!!");
-    await expect(election_instance.vote(0, { from: users[1].address })).to
-      .eventually.be.fulfilled;
+    // let param2 = 0 + users[1].address;
+    let param2 = ethers.utils.solidityPack(
+      ["uint256", "address"],
+      [0, users[1].address]
+    );
+    await expect(
+      election_instance.vote(web3.utils.keccak256(param2), {
+        from: users[1].address,
+      })
+    ).to.eventually.be.fulfilled;
     console.log("User 2 voted successfully!!");
     console.log("All user voted or time ups!!");
     await expect(election_instance.updateState()).to.eventually.be.fulfilled;
+
     await expect(election_instance.stage()).to.eventually.be.a.bignumber.equal(
       new BN(2)
     );
     console.log(
-      "Now, election status is updated by ECA from Voting Phase -> Tallying (Voting phase is over!!)"
+      "Now, election status is updated by ECA from Voting Phase -> Revealing (Voting phase is over!!)"
+    );
+    await expect(
+      election_instance.revealVote(0, {
+        from: users[0].address,
+      })
+    ).to.eventually.be.fulfilled;
+
+    console.log("Vote Reveal for user 1 success!!");
+
+    await expect(
+      election_instance.revealVote(0, {
+        from: users[1].address,
+      })
+    ).to.eventually.be.fulfilled;
+
+    console.log("Vote Reveal for user 2 success!!");
+
+    await expect(election_instance.updateState()).to.eventually.be.fulfilled;
+
+    await expect(election_instance.stage()).to.eventually.be.a.bignumber.equal(
+      new BN(3)
+    );
+    console.log(
+      "Now, election status is updated by ECA from Revealing Phase -> Tallying (Revealing phase is over!!)"
     );
     await expect(election_instance.tallyVote()).to.eventually.be.fulfilled;
     await expect(election_instance.updateState()).to.eventually.be.fulfilled;
     await expect(election_instance.stage()).to.eventually.be.a.bignumber.equal(
-      new BN(3)
+      new BN(4)
     );
     console.log(
       "Tallying is completed successfully and status is changed from Tallying -> Declare Winner State by ECA!!"
@@ -173,7 +216,8 @@ contract("Election", (accounts) => {
     assert.equal(winner.user_address, candidates[0].address);
     console.log(
       "Winner for the current election is candidate with address ",
-      winner.user_address
+      winner.user_address,
+      winner.voteCount
     );
   });
 });
