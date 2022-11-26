@@ -43,10 +43,10 @@ contract("ECA", (accounts) => {
 });
 
 // await expect(instance.transfer(accounts[1], sendTokens)).to.eventually.be
-//       .fulfilled;
-//     await expect(
-//       instance.balanceOf(accounts[0])
-//     ).to.eventually.be.a.bignumber.equal(totalSupply.sub(new BN(sendTokens)));
+//   .fulfilled;
+// await expect(
+//   instance.balanceOf(accounts[0])
+// ).to.eventually.be.a.bignumber.equal(totalSupply.sub(new BN(sendTokens)));
 
-// await expect(instance.transfer(accounts[1], new BN(balanceOfDeployer + 1)))
-// .to.eventually.be.rejected;
+// await expect(instance.transfer(accounts[1], new BN(balanceOfDeployer + 1))).to
+//   .eventually.be.rejected;

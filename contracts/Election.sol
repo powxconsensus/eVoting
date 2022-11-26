@@ -123,6 +123,8 @@ contract Election {
         ) {
             votes storage current_vote = valid_votes[total_vote++];
             current_vote.candidateId = _candidateId;
+        } else {
+            revert("failed");
         }
 
         // else say not correct input; try again.
