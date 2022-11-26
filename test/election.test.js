@@ -449,7 +449,7 @@ contract("Election", (accounts) => {
     console.log(
       "Tallying is completed successfully and status is changed from Tallying -> Declare Winner State by ECA!!"
     );
-    await expect(election_instance.declareWinner()).to.eventually.be.fulfilled;
+    // await expect(election_instance.declareWinner()).to.eventually.be.fulfilled;
     const winner = await election_instance.declareWinner();
     assert.equal(winner.user_address, candidates[0].address);
     console.log(

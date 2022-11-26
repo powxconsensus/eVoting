@@ -116,18 +116,14 @@ contract Election {
             revert("reveal stage has not yet started");
         if (stage != STAGE.REVEAL) revert("Reveal stage is over");
         require(is_voted[msg.sender], "Voter has not voted during Voting!");
-        if (
-            keccak256(
-                abi.encodePacked(uint256(_candidateId), address(msg.sender))
-            ) == voters[msg.sender].vote_commit
-        ) {
-            votes storage current_vote = valid_votes[total_vote++];
-            current_vote.candidateId = _candidateId;
-        } else {
-            revert("failed");
-        }
+        require(
+            keccak256(abi.encode(uint256(_candidateId), address(msg.sender))) ==
+                voters[msg.sender].vote_commit,
+            "wrong vote"
+        );
 
-        // else say not correct input; try again.
+        votes storage current_vote = valid_votes[total_vote++];
+        current_vote.candidateId = _candidateId;
     }
 
     /*

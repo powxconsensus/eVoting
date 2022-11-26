@@ -5,7 +5,7 @@ module.exports = {
   // to customize your Truffle configuration!
   mocha: {
     enableTimeouts: false,
-    before_timeout: 120000, // Here is 2min but can be whatever timeout
+    before_timeout: 360000, // Here is 2min but can be whatever timeout
   },
   contracts_build_directory: path.join(__dirname, "client/src/contracts"),
   networks: {
